@@ -19,11 +19,11 @@ import static java.lang.Thread.sleep;
 
 public class MainActivity extends AppCompatActivity {
 
-    Boolean is_searching = false;
-    Boolean keep_true = true;
+    Boolean is_searching = false; //Flag for collecting data(IMU and BLE)
+    Boolean keep_true = true; // aux value.
 
     private class BLERunnable implements Runnable {
-        private final static String TAG = "My Runnable ===> ";
+        private final static String TAG = "KeepSearchThread";
 //        public TextView mTextView; // show data
 //        public Button mControlButton;// start or stop collect data
 //        public BluetoothAdapter mBluetoothAdapter;
@@ -31,31 +31,27 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             // TODO Auto-generated method stub
-            Log.d(TAG, "run");
-            mTextView.append("started run");
+            //// Never use mText in this function!!!
+            Log.d(TAG, "begin to run");
 
             try {
                 while (keep_true) {
                         if (is_searching) {
-                            mTextView.append("Searching...");
                             if (mBluetoothAdapter.isDiscovering()) {
-                                mTextView.append("wait for discovering ");
-//                    mBluetoothAdapter.cancelDiscovery();
-                                sleep(10);
+                                Log.d(TAG,"wait for current discovering");
+                                sleep(5);
                             } else {
-                                mTextView.append("start Discovery()");
-
                                 mBluetoothAdapter.startDiscovery();
                             }
-//                            Log.i("Test", "try to out");
                         } else {
-                            mTextView.append("wait 100");
                             sleep(100);
                         }
                 }
 
             } catch (Exception e) {
+//                mTextView.append("Error at "+e.toString() );
                 e.printStackTrace();
+
             }
 
         }
@@ -65,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private Button mControlButton;// start or stop collect data
     private BluetoothAdapter mBluetoothAdapter;
 
-    private Thread ble_discovering_thread;
+    private Thread ble_discovering_thread; // thread don't change to local variable
 
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
@@ -78,11 +74,11 @@ public class MainActivity extends AppCompatActivity {
             if (action.equals(BluetoothDevice.ACTION_FOUND)) {
                 BluetoothDevice device = intent
                         .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                // 搜索到的不是已经绑定的蓝牙设备
-//                if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
+                int rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI,Short.MIN_VALUE);
                 // 显示在TextView上
-                mTextView.append(device.getName() + ":"
-                        + device.getAddress() + "\n");
+                mTextView.append(String.valueOf(System.currentTimeMillis())+","+
+                        device.getAddress() +","+
+                                Integer.toString(rssi)+ "\n");
 //                }
                 // 搜索完成
             } else if (action
@@ -105,14 +101,7 @@ public class MainActivity extends AppCompatActivity {
         mControlButton = (Button) findViewById(R.id.ControlButton);
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        // 获取所有已经绑定的蓝牙设备
-        Set<BluetoothDevice> devices = mBluetoothAdapter.getBondedDevices();
-        if (devices.size() > 0) {
-            for (BluetoothDevice bluetoothDevice : devices) {
-                mTextView.append(bluetoothDevice.getName() + ":"
-                        + bluetoothDevice.getAddress() + "\n\n");
-            }
-        }
+
         // 注册用以接收到已搜索到的蓝牙设备的receiver
         IntentFilter mFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(mReceiver, mFilter);
@@ -123,10 +112,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Start runnable
         BLERunnable bleRunnable = new BLERunnable();
-//        bleRunnable.mBluetoothAdapter = mBluetoothAdapter;
-//        bleRunnable.mControlButton = mControlButton;
-//        bleRunnable.mTextView = mTextView;
-//        new Thread(new BLERunnable()).start();
+
         ble_discovering_thread = new Thread(bleRunnable);
         ble_discovering_thread.start();
     }
