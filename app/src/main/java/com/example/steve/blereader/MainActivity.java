@@ -19,27 +19,41 @@ public class MainActivity extends AppCompatActivity {
 
     Boolean is_searching = false;
 
-    public class BLERunnable implements Runnable {
+    private class BLERunnable implements Runnable {
         private final static String TAG = "My Runnable ===> ";
+//        public TextView mTextView; // show data
+//        public Button mControlButton;// start or stop collect data
+//        public BluetoothAdapter mBluetoothAdapter;
 
         @Override
         public void run() {
             // TODO Auto-generated method stub
             Log.d(TAG, "run");
+            mTextView.append("started run");
 
-//            try{
-//            while (is_searching) {
-//                if (mBluetoothAdapter.isDiscovering()) {
-////                    mBluetoothAdapter.cancelDiscovery();
-//                    wait(10);
-//                }else{
-//
-//                    mBluetoothAdapter.startDiscovery();
-//                }
-//
-//            }
-//
-//            }catch ()
+            try {
+                while (true) {
+                    if (is_searching) {
+                        mTextView.append("Searching...");
+                        if (mBluetoothAdapter.isDiscovering()) {
+//                    mBluetoothAdapter.cancelDiscovery();
+                            wait(10);
+                        } else {
+                            mTextView.append("start Discovery()");
+
+                            mBluetoothAdapter.startDiscovery();
+                        }
+                        Log.i("Test", "try to out");
+                    } else {
+                        wait(100);
+                    }
+
+
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
         }
     }
@@ -47,6 +61,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView mTextView; // show data
     private Button mControlButton;// start or stop collect data
     private BluetoothAdapter mBluetoothAdapter;
+
+    private Thread ble_discovering_thread;
 
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
@@ -60,11 +76,11 @@ public class MainActivity extends AppCompatActivity {
                 BluetoothDevice device = intent
                         .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 // 搜索到的不是已经绑定的蓝牙设备
-                if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
-                    // 显示在TextView上
-                    mTextView.append(device.getName() + ":"
-                            + device.getAddress() + "\n");
-                }
+//                if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
+                // 显示在TextView上
+                mTextView.append(device.getName() + ":"
+                        + device.getAddress() + "\n");
+//                }
                 // 搜索完成
             } else if (action
                     .equals(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)) {
@@ -100,6 +116,16 @@ public class MainActivity extends AppCompatActivity {
         // 注册搜索完时的receiver
         mFilter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
         registerReceiver(mReceiver, mFilter);
+
+
+        // Start runnable
+        BLERunnable bleRunnable = new BLERunnable();
+//        bleRunnable.mBluetoothAdapter = mBluetoothAdapter;
+//        bleRunnable.mControlButton = mControlButton;
+//        bleRunnable.mTextView = mTextView;
+//        new Thread(new BLERunnable()).start();
+        ble_discovering_thread = new Thread(bleRunnable);
+        ble_discovering_thread.start();
     }
 
     public void onClick_Search(View v) {
@@ -112,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
             is_searching = true;
 //            setTitle("正在扫描....");
             Log.d("test", "clicked on search");
+//            mBluetoothAdapter.startDiscovery();
             mControlButton.setText("Stop");
         }
 
