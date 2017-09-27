@@ -6,6 +6,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,11 +21,15 @@ import java.util.Set;
 
 import static java.lang.Thread.sleep;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements SensorEventListener {
 
     Boolean is_searching = false; //Flag for collecting data(IMU and BLE)
     Boolean keep_true = true; // aux value.
 
+    /**
+     * For Maintain the collecting state.
+     */
     private class BLERunnable implements Runnable {
         private final static String TAG = "KeepSearchThread";
 //        public TextView mTextView; // show data
@@ -59,10 +67,15 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView mTextView; // show data
     private Button mControlButton;// start or stop collect data
-    private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothAdapter mBluetoothAdapter; // BLE adapter
+
+    private SensorManager mSensorManager;
 
     private Thread ble_discovering_thread; // thread don't change to local variable
 
+    /**
+     * BLE RSSI pre-processing and saving.
+     */
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
         @Override
@@ -89,6 +102,8 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -112,10 +127,18 @@ public class MainActivity extends AppCompatActivity {
 
         // Start runnable
         BLERunnable bleRunnable = new BLERunnable();
-
         ble_discovering_thread = new Thread(bleRunnable);
         ble_discovering_thread.start();
+
+        // Sensor manager
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+
     }
+
+
+
+
 
     public void onClick_Search(View v) {
 //        setProgressBarIndeterminateVisibility(true);
@@ -123,12 +146,58 @@ public class MainActivity extends AppCompatActivity {
             is_searching = false;
 //            setTitle("Searching stopped");
             mControlButton.setText("Start");
+
+            mSensorManager.unregisterListener(this);
+
         } else {
             is_searching = true;
 //            setTitle("正在扫描....");
             Log.d("test", "clicked on search");
 //            mBluetoothAdapter.startDiscovery();
             mControlButton.setText("Stop");
+
+            // register sensors listener
+            mSensorManager.registerListener(this,
+                    mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                    SensorManager.SENSOR_DELAY_FASTEST);
+
+            mSensorManager.registerListener(this,
+                    mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE),
+                    SensorManager.SENSOR_DELAY_FASTEST);
+
+            mSensorManager.registerListener(this,
+                    mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
+                    SensorManager.SENSOR_DELAY_FASTEST);
+
+        }
+
+    }
+
+    // Sensor Event listener
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+
+        float[] values = sensorEvent.values;
+
+        int sensorType = sensorEvent.sensor.getType();
+        switch (sensorType)
+        {
+            case Sensor.TYPE_ACCELEROMETER:
+
+                break;
+            case Sensor.TYPE_GYROSCOPE:
+
+                break;
+            case Sensor.TYPE_MAGNETIC_FIELD:
+
+                break;
+
         }
 
 
