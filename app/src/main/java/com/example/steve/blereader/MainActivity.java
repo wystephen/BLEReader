@@ -15,9 +15,12 @@ import android.widget.TextView;
 
 import java.util.Set;
 
+import static java.lang.Thread.sleep;
+
 public class MainActivity extends AppCompatActivity {
 
     Boolean is_searching = false;
+    Boolean keep_true = true;
 
     private class BLERunnable implements Runnable {
         private final static String TAG = "My Runnable ===> ";
@@ -32,23 +35,23 @@ public class MainActivity extends AppCompatActivity {
             mTextView.append("started run");
 
             try {
-                while (true) {
-                    if (is_searching) {
-                        mTextView.append("Searching...");
-                        if (mBluetoothAdapter.isDiscovering()) {
+                while (keep_true) {
+                        if (is_searching) {
+                            mTextView.append("Searching...");
+                            if (mBluetoothAdapter.isDiscovering()) {
+                                mTextView.append("wait for discovering ");
 //                    mBluetoothAdapter.cancelDiscovery();
-                            wait(10);
+                                sleep(10);
+                            } else {
+                                mTextView.append("start Discovery()");
+
+                                mBluetoothAdapter.startDiscovery();
+                            }
+//                            Log.i("Test", "try to out");
                         } else {
-                            mTextView.append("start Discovery()");
-
-                            mBluetoothAdapter.startDiscovery();
+                            mTextView.append("wait 100");
+                            sleep(100);
                         }
-                        Log.i("Test", "try to out");
-                    } else {
-                        wait(100);
-                    }
-
-
                 }
 
             } catch (Exception e) {
