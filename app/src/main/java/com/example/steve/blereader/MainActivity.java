@@ -129,18 +129,20 @@ public class MainActivity extends AppCompatActivity
                     if (is_searching) {
                         if (mBluetoothAdapter.isDiscovering()) {
                             Log.d(TAG, "wait for current discovering");
-                            sleep(5);
+//                            mBluetoothAdapter.cancelDiscovery();
+//                            sleep(5);
                         } else {
                             if (ble_file != null) {
                                 ble_file.flush();
                             }
                             mBluetoothAdapter.startDiscovery();
+                            sleep(0,200);
                         }
                     } else {
                         if (mBluetoothAdapter.isDiscovering()) {
                             mBluetoothAdapter.cancelDiscovery();
                         }
-                        sleep(100);
+                        sleep(0,10);
                     }
                 }
 
@@ -176,9 +178,9 @@ public class MainActivity extends AppCompatActivity
                 BluetoothDevice device = intent
                         .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 int rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE);
-//                mTextView.append(String.valueOf(System.currentTimeMillis()) + "," +
-//                        device.getAddress() + "," +
-//                        Integer.toString(rssi) + "\n");
+                mTextView.append(String.valueOf(System.currentTimeMillis()) + "," +
+                        device.getAddress() + "," +
+                        Integer.toString(rssi) + "\n");
 
                 // write to file at each moments but flush when discovering ended(see : BLERunnable).
                 StringBuilder tmp_sb = new StringBuilder();
