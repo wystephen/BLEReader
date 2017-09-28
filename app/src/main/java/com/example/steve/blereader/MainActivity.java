@@ -44,8 +44,8 @@ public class MainActivity extends AppCompatActivity
 
     //    File ble_file = null;
 //    File sensor_file = null;
-    FileOutputStream ble_file ;//new FileOutputStream();
-    FileOutputStream sensor_file ;//= new FileOutputStream();
+    FileOutputStream ble_file;//new FileOutputStream();
+    FileOutputStream sensor_file;//= new FileOutputStream();
 
 
     private class SensorDataSaver implements Runnable {
@@ -62,33 +62,30 @@ public class MainActivity extends AppCompatActivity
                         if (is_acc_updated && is_gyr_updated && is_mag_updated) {
                             // TODO: save to file
                             try {
-                                Log.i(TAG,local_sb.toString());
+                                Log.i(TAG, local_sb.toString());
                                 if (writed_counter > 10) {
-                                    sensor_file.write(local_sb.toString().getBytes(),0,local_sb.toString().getBytes().length);
+                                    sensor_file.write(local_sb.toString().getBytes(), 0, local_sb.toString().getBytes().length);
                                     sensor_file.flush();
-                                    local_sb.delete(0,local_sb.length());
+                                    local_sb.delete(0, local_sb.length());
                                     writed_counter = 0;
                                 } else {
-                                    writed_counter +=1;
-                                    local_sb.append(String.valueOf(save_acc_time)+",");
-                                    for(int i=1;i<9;++i)
-                                    {
+                                    writed_counter += 1;
+                                    local_sb.append(String.valueOf(save_acc_time) + ",");
+                                    for (int i = 1; i < 9; ++i) {
 
-                                       local_sb.append(String.format("%.20f,",sensorvalues[i]));
+                                        local_sb.append(String.format("%.20f,", sensorvalues[i]));
                                     }
-                                    local_sb.append(String.valueOf(sensorvalues[9])+"\n");
+                                    local_sb.append(String.valueOf(sensorvalues[9]) + "\n");
 
                                 }
                                 is_acc_updated = false;
                                 is_gyr_updated = false;
                                 is_mag_updated = false;
 
-                            }catch (Exception e){
-                                Log.i(TAG,"error in write to file (sensor file)");
+                            } catch (Exception e) {
+                                Log.i(TAG, "error in write to file (sensor file)");
                                 System.out.print("error while save file");
                             }
-
-
 
 
                         } else {
@@ -136,13 +133,13 @@ public class MainActivity extends AppCompatActivity
                                 ble_file.flush();
                             }
                             mBluetoothAdapter.startDiscovery();
-                            sleep(0,200);
+                            sleep(0, 200);
                         }
                     } else {
                         if (mBluetoothAdapter.isDiscovering()) {
                             mBluetoothAdapter.cancelDiscovery();
                         }
-                        sleep(0,10);
+                        sleep(0, 10);
                     }
                 }
 
@@ -189,10 +186,10 @@ public class MainActivity extends AppCompatActivity
                         Integer.toString(rssi) + "\n");
                 try {
 
-                    ble_file.write(tmp_sb.toString().getBytes(),0,tmp_sb.toString().getBytes().length);
+                    ble_file.write(tmp_sb.toString().getBytes(), 0, tmp_sb.toString().getBytes().length);
 //                    ble_file.write("aaa".getBytes());
                 } catch (Exception e) {
-                    mTextView.append("broadcastReceiver" + e.getLocalizedMessage()+e.toString() + "\n");
+                    mTextView.append("broadcastReceiver" + e.getLocalizedMessage() + e.toString() + "\n");
 
                 }
             } else if (action
@@ -248,25 +245,21 @@ public class MainActivity extends AppCompatActivity
 
         boolean permission_ok = true;
 
-        for(String permission: needed_permission)
-        {
-            if(ContextCompat.checkSelfPermission(this,
-                    permission)!= PackageManager.PERMISSION_GRANTED)
-            {
+        for (String permission : needed_permission) {
+            if (ContextCompat.checkSelfPermission(this,
+                    permission) != PackageManager.PERMISSION_GRANTED) {
                 permission_ok = false;
-                mTextView.append(String.valueOf(permission_ok)+"\n");
+                mTextView.append(String.valueOf(permission_ok) + "\n");
             }
         }
 
-        if(!permission_ok)
-        {
+        if (!permission_ok) {
             ActivityCompat.requestPermissions(
                     this,
                     needed_permission,
                     1
             );
         }
-
 
 
     }
@@ -299,10 +292,8 @@ public class MainActivity extends AppCompatActivity
                 sensor_file = null;
             } catch (IOException e) {
                 Log.d("test", e.toString());
-                mTextView.append(e.getLocalizedMessage()+e.toString() + "\n");
+                mTextView.append(e.getLocalizedMessage() + e.toString() + "\n");
             }
-
-
 
 
         } else {
@@ -331,32 +322,32 @@ public class MainActivity extends AppCompatActivity
             try {
 
 
-
                 if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
                     File sdCardDir = Environment.getExternalStorageDirectory();
 
-                    File ble_file_creator = new File(sdCardDir.getCanonicalPath() + "/a/"+ String.valueOf(time_now) + "ble.txt");
-                    boolean is_ble_file_ok =  ble_file_creator.createNewFile();
+                    File ble_file_creator = new File(sdCardDir.getCanonicalPath() + "/a/" + String.valueOf(time_now) + "ble.txt");
+                    boolean is_ble_file_ok = ble_file_creator.createNewFile();
                     mTextView.append("is ble file ok :" + String.valueOf(is_ble_file_ok) + "\n");
 
 
-                    File sensor_file_creator = new File( sdCardDir.getCanonicalPath() + "/a/"+ String.valueOf(time_now) + "sensor.txt");
+                    File sensor_file_creator = new File(sdCardDir.getCanonicalPath() + "/a/" + String.valueOf(time_now) + "sensor.txt");
 
                     boolean is_seasor_file_ok = sensor_file_creator.createNewFile();
-                    mTextView.append("is sensor file ok : " + String.valueOf(is_seasor_file_ok)+"\n");
+                    mTextView.append("is sensor file ok : " + String.valueOf(is_seasor_file_ok) + "\n");
 
                     ble_file = new FileOutputStream(ble_file_creator.getCanonicalPath());
                     sensor_file = new FileOutputStream(sensor_file_creator.getCanonicalPath());
 
-                    assert(ble_file!=null && sensor_file!=null);
+                    assert (ble_file != null && sensor_file != null);
                 } else {
                     mTextView.append("Cannot access SDCARD!!!\n");
                 }
 
-            } catch (IOException e) {;//
+            } catch (IOException e) {
+                ;//
                 Log.d("test", e.toString());
                 e.printStackTrace();
-                mTextView.append(e.getLocalizedMessage()+e.toString() + "\n");
+                mTextView.append(e.getLocalizedMessage() + e.toString() + "\n");
             }
 
 
