@@ -21,10 +21,12 @@ import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Environment;
 import android.support.annotation.RequiresApi;
+import android.support.annotation.StringDef;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.LoginFilter;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -48,14 +50,16 @@ public class MainActivity extends AppCompatActivity
     Boolean keep_true = true; // aux value.
     float[] sensorvalues = new float[10];// time acc_x acc_y acc_z gyr_x gyr_y gyr_z mag_x mag_y mag_z
     long save_acc_time = 0;
+    StringBuilder rssi_buffer = new StringBuilder();// for save
+
     boolean is_acc_updated = false;
     boolean is_gyr_updated = false;
     boolean is_mag_updated = false;
 
     //    File ble_file = null;
 //    File sensor_file = null;
-    FileOutputStream ble_file;//new FileOutputStream();
-    FileOutputStream sensor_file;//= new FileOutputStream();
+    public FileOutputStream ble_file;//new FileOutputStream();
+    public FileOutputStream sensor_file;//= new FileOutputStream();
 
 
     private class SensorDataSaver implements Runnable {
@@ -133,29 +137,14 @@ public class MainActivity extends AppCompatActivity
 
             try {
                 while (keep_true) {
+                    Log.i("LeScan","in while "+ String.valueOf(is_searching));
                     if (is_searching) {
-//                        if (mBluetoothAdapter.isDiscovering()) {
-//                            Log.d(TAG, "wait for current discovering");
-////                            mBluetoothAdapter.cancelDiscovery();
-////                            sleep(5);
-//                        } else {
-//                            if (ble_file != null) {
-//                                ble_file.flush();
-//                            }
-//                            mBluetoothAdapter.startDiscovery();
-//                            sleep(0, 200);
-//                        }
 
-
-//                        mBluetoothAdapter.startLeScan(new BluetoothAdapter.LeScanCallback() {
-//                            @Override
-//                            public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-////                                mTextView.append(device.getAddress().toString()+String.valueOf(rssi));
-//                                Log.i("KeepSearchThread","LeScanner"+String.valueOf(System.currentTimeMillis())+","+ device.getAddress().toString()+","+String.valueOf(rssi));
-//                            }
-//                        });
-//                        mBluetoothAdapter.startLeScan(mLeScanCallback);
-//                        Log.i(TAG,"after start LeScan");
+                        Log.i(TAG,"after start LeScan");
+                        ble_file.write(rssi_buffer.toString().getBytes(),0,rssi_buffer.toString().getBytes().length);
+                        rssi_buffer.delete(0,rssi_buffer.length());
+                        ble_file.flush();
+                        sleep(1000);
 //                        sleep(1000);
 
 
@@ -163,14 +152,14 @@ public class MainActivity extends AppCompatActivity
 //                        if (mBluetoothAdapter.isDiscovering()) {
 //                            mBluetoothAdapter.cancelDiscovery();
 //                        }
-                        sleep(0, 10);
+                        sleep(10);
 
                     }
                 }
 
             } catch (Exception e) {
 //                mTextView.append("Error at "+e.toString() );
-                Log.i(TAG,e.toString());
+                Log.i(TAG,"LeScan error:" + e.toString());
                 e.printStackTrace();
 
             }
@@ -184,11 +173,15 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
             Log.i("LeScanner",device.getAddress().toString() +":"+String.valueOf(rssi));
+            rssi_buffer.append(String.valueOf(System.currentTimeMillis())+ ","+device.getAddress().toString()+","+String.valueOf(rssi)+"\n");
+            Log.i("LeScanner",String.valueOf( rssi_buffer.length()));
 //            mTextView.append(device.getAddress().toString()+":"+String.valueOf(rssi));
         }
+
+
     };
 
-    private ScanCallback mScanCallback = new ScanCallback() {
+    public ScanCallback mScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             Log.i("callbackType", String.valueOf(callbackType));
@@ -200,7 +193,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
             for (ScanResult sr : results) {
-                Log.i("ScanResult - Results", sr.toString());
+                Log.i("ScanResult - Results ", sr.toString());
             }
         }
 
@@ -220,7 +213,7 @@ public class MainActivity extends AppCompatActivity
     private Thread ble_discovering_thread; // thread don't change to local variable
 
     /**
-     * BLE RSSI pre-processing and saving.
+     * BLE RSSI pre-processing and saving.(invariable)
      */
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
@@ -274,9 +267,20 @@ public class MainActivity extends AppCompatActivity
 
         mControlButton = (Button) findViewById(R.id.ControlButton);
 
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        mBleScanner =
-                ((BluetoothManager)getSystemService("bluetooth")).getAdapter().getBluetoothLeScanner();
+        // Initializes Bluetooth adapter.
+        final BluetoothManager bluetoothManager =
+                (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        mBluetoothAdapter = bluetoothManager.getAdapter();
+        // Ensures Bluetooth is available on the device and it is enabled. If not,
+// displays a dialog requesting user permission to enable Bluetooth.
+        if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+//            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            mBluetoothAdapter.enable();
+        }
+
+        mBleScanner =mBluetoothAdapter.getBluetoothLeScanner();
+//                ((BluetoothManager)getSystemService("bluetooth")).getAdapter().getBluetoothLeScanner();
 //        // 注册用以接收到已搜索到的蓝牙设备的receiver
 //        IntentFilter mFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
 //        registerReceiver(mReceiver, mFilter);
@@ -337,7 +341,11 @@ public class MainActivity extends AppCompatActivity
              */
 //            mBluetoothAdapter.stopLeScan(mLeScanCallback);
 //            mBleScanner.
-            mBleScanner.startScan(mScanCallback);
+//            BluetoothAdapter.getDefaultAdapter().disable();
+//            BluetoothAdapter.getDefaultAdapter().enable();
+//            mBleScanner.startScan(mScanCallback);
+//            mBleScanner.stopScan(mScanCallback);
+            mBluetoothAdapter.stopLeScan(mLeScanCallback);
 
             is_searching = false;
             setTitle("Searching stopped");
@@ -364,22 +372,12 @@ public class MainActivity extends AppCompatActivity
 
 
         } else {
-//            mBleScanner.stopScan(mLeScanCallback);
 
-            mTextView.append( String.valueOf(mBluetoothAdapter.getScanMode())+"\n");
-//            mBluetoothAdapter.startLeScan(mLeScanCallback);
-//            ScanSettings sst  = new ScanSettings();
-            ArrayList<ScanFilter> sflist = new ArrayList<ScanFilter>();
-            ScanFilter sf = new ScanFilter.Builder().build();
-            sflist.add(sf);
-            ScanSettings sst = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
-            mBleScanner.startScan(sflist,sst,mScanCallback);
-//            mB
-//            mBleScanner.startScan(mScanCallback);
+            mTextView.append( " mBluetoothAapter mode:"+String.valueOf(mBluetoothAdapter.getScanMode())+"\n");
 
-            is_searching = true;
-            setTitle("正在扫描....");
-            Log.d("test", "clicked on search");
+            mBluetoothAdapter.startLeScan(mLeScanCallback);
+
+
 //            mBluetoothAdapter.startDiscovery();
             mControlButton.setText("Stop");
 
@@ -397,7 +395,7 @@ public class MainActivity extends AppCompatActivity
                     SensorManager.SENSOR_DELAY_FASTEST);
 
 
-            // TODO: openfile
+            //  openfile
             long time_now = System.currentTimeMillis();
             try {
 
@@ -431,6 +429,11 @@ public class MainActivity extends AppCompatActivity
             }
 
 
+            is_searching = true;
+            setTitle("正在扫描....");
+            Log.i("test", "clicked on search");
+
+
         }
 
     }
@@ -443,7 +446,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * backcall for sensor information
+     * Callback for sensor information
      *
      * @param sensorEvent
      */
