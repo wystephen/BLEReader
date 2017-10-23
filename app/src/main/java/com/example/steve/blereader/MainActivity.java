@@ -31,15 +31,23 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.TextView;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import static android.webkit.ConsoleMessage.MessageLevel.ERROR;
 import static android.webkit.ConsoleMessage.MessageLevel.LOG;
 import static java.lang.Thread.sleep;
 
@@ -80,6 +88,14 @@ public class MainActivity extends AppCompatActivity
                                 if (writed_counter > 10) {
                                     sensor_file.write(local_sb.toString().getBytes(), 0, local_sb.toString().getBytes().length);
                                     sensor_file.flush();
+                                    if(BleSendSocket.isConnected())
+                                    {
+                                        BufferedWriter out = new BufferedWriter(new OutputStreamWriter(BleSendSocket.getOutputStream()));
+                                        out.write(local_sb.toString());
+                                        out.flush();
+                                    }else{
+                                        Log.i(TAG, "run: sockedt not connected");
+                                    }
                                     local_sb.delete(0, local_sb.length());
                                     writed_counter = 0;
                                 } else {
@@ -137,12 +153,12 @@ public class MainActivity extends AppCompatActivity
 
             try {
                 while (keep_true) {
-                    Log.i("LeScan","in while "+ String.valueOf(is_searching));
+                    Log.i("LeScan", "in while " + String.valueOf(is_searching));
                     if (is_searching) {
 
-                        Log.i(TAG,"after start LeScan");
-                        ble_file.write(rssi_buffer.toString().getBytes(),0,rssi_buffer.toString().getBytes().length);
-                        rssi_buffer.delete(0,rssi_buffer.length());
+                        Log.i(TAG, "after start LeScan");
+                        ble_file.write(rssi_buffer.toString().getBytes(), 0, rssi_buffer.toString().getBytes().length);
+                        rssi_buffer.delete(0, rssi_buffer.length());
                         ble_file.flush();
                         sleep(1000);
 //                        sleep(1000);
@@ -159,7 +175,7 @@ public class MainActivity extends AppCompatActivity
 
             } catch (Exception e) {
 //                mTextView.append("Error at "+e.toString() );
-                Log.i(TAG,"LeScan error:" + e.toString());
+                Log.i(TAG, "LeScan error:" + e.toString());
                 e.printStackTrace();
 
             }
@@ -168,13 +184,12 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-
-    private BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback(){
+    private BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
         public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-            Log.i("LeScanner",device.getAddress().toString() +":"+String.valueOf(rssi));
-            rssi_buffer.append(String.valueOf(System.currentTimeMillis())+ ","+device.getAddress().toString()+","+String.valueOf(rssi)+"\n");
-            Log.i("LeScanner",String.valueOf( rssi_buffer.length()));
+            Log.i("LeScanner", device.getAddress().toString() + ":" + String.valueOf(rssi));
+            rssi_buffer.append(String.valueOf(System.currentTimeMillis()) + "," + device.getAddress().toString() + "," + String.valueOf(rssi) + "\n");
+            Log.i("LeScanner", String.valueOf(rssi_buffer.length()));
 //            mTextView.append(device.getAddress().toString()+":"+String.valueOf(rssi));
         }
 
@@ -205,12 +220,20 @@ public class MainActivity extends AppCompatActivity
 
     private TextView mTextView; // show data
     private Button mControlButton;// start or stop collect data
+
+    private EditText mEditAddr; // ip address
+    private EditText mEditPort; // ip port
+
+    private CheckBox mCheckBox; // enable of disable tcp connect
+
     private BluetoothAdapter mBluetoothAdapter; // BLE adapter
     private BluetoothLeScanner mBleScanner;
 
     private SensorManager mSensorManager;
 
     private Thread ble_discovering_thread; // thread don't change to local variable
+
+    private Socket BleSendSocket;
 
     /**
      * BLE RSSI pre-processing and saving.(invariable)
@@ -267,6 +290,11 @@ public class MainActivity extends AppCompatActivity
 
         mControlButton = (Button) findViewById(R.id.ControlButton);
 
+
+        mEditAddr = (EditText) findViewById(R.id.ipad_text);
+        mEditPort = (EditText) findViewById(R.id.ipport_text);
+        mCheckBox = (CheckBox) findViewById(R.id.checkBox);
+
         // Initializes Bluetooth adapter.
         final BluetoothManager bluetoothManager =
                 (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
@@ -279,7 +307,7 @@ public class MainActivity extends AppCompatActivity
             mBluetoothAdapter.enable();
         }
 
-        mBleScanner =mBluetoothAdapter.getBluetoothLeScanner();
+        mBleScanner = mBluetoothAdapter.getBluetoothLeScanner();
 //                ((BluetoothManager)getSystemService("bluetooth")).getAdapter().getBluetoothLeScanner();
 //        // 注册用以接收到已搜索到的蓝牙设备的receiver
 //        IntentFilter mFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
@@ -339,6 +367,8 @@ public class MainActivity extends AppCompatActivity
             /**
              * STOP
              */
+
+            mCheckBox.setClickable(true);
 //            mBluetoothAdapter.stopLeScan(mLeScanCallback);
 //            mBleScanner.
 //            BluetoothAdapter.getDefaultAdapter().disable();
@@ -372,8 +402,34 @@ public class MainActivity extends AppCompatActivity
 
 
         } else {
+            /**
+             * Start
+             */
+            mCheckBox.setClickable(false);
 
-            mTextView.append( " mBluetoothAapter mode:"+String.valueOf(mBluetoothAdapter.getScanMode())+"\n");
+
+            if (mCheckBox.isEnabled()) {
+                BleSendSocket = new Socket();
+
+                SocketAddress socketAddress = new InetSocketAddress(mEditAddr.getText().toString(),
+                        Integer.parseInt(mEditPort.getText().toString()));
+                try{
+
+                    BleSendSocket.connect(socketAddress,3000);
+
+                    BleSendSocket.getOutputStream().write(12);
+                    BleSendSocket.getOutputStream().flush();
+                }catch(Exception e)
+                {
+                   Log.i("test",e.toString());
+                }
+
+
+
+
+            }
+
+            mTextView.append(" mBluetoothAapter mode:" + String.valueOf(mBluetoothAdapter.getScanMode()) + "\n");
 
             mBluetoothAdapter.startLeScan(mLeScanCallback);
 
